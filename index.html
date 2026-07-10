@@ -13,23 +13,46 @@
             // 把你的 JSONBin 读取 URL 替换到这里
             var dataUrl = 'https://api.jsonbin.io/v3/b/6a506c21f5f4af5e297abb75';
 
+            // 递归渲染（兼容所有浏览器）
+            function renderList(items) {
+                if (!items) return '';
+                // 确保是数组
+                if (Object.prototype.toString.call(items) !== '[object Array]') {
+                    return '';
+                }
+                var html = '<ul>';
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    if (!item) continue;
+                    html += '<li>';
+                    if (item.url) {
+                        html += '<a href="' + item.url + '">' + (item.name || '') + '</a>';
+                    } else {
+                        html += (item.name || '未命名');
+                    }
+                    // 检查 children 是否为数组且不为空
+                    if (item.children && Object.prototype.toString.call(item.children) === '[object Array]' && item.children.length > 0) {
+                        html += renderList(item.children);
+                    }
+                    html += '</li>';
+                }
+                html += '</ul>';
+                return html;
+            }
+
             var xhr = new XMLHttpRequest();
             xhr.open('GET', dataUrl, true);
-            // 如果 JSONBin 需要特殊 header（免费版不需要），可忽略
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     try {
                         var response = JSON.parse(xhr.responseText);
-                        // JSONBin 返回的数据在 record 字段里
-                        var data = response.record || response; // 兼容不同版本
-                        var html = '<ul>';
-                        for (var i = 0; i < data.length; i++) {
-                            html += '<li><a href="' + data[i].url + '">' + data[i].name + '</a></li>';
-                        }
-                        html += '</ul>';
-                        document.getElementById('linkList').innerHTML = html;
+                        // JSONBin 的数据可能在 record 字段，也可能直接就是数组
+                        var data = response.record || response;
+                        // 调试：如果你想知道数据长什么样，可以把下面这行注释去掉
+                        // document.getElementById('linkList').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                        document.getElementById('linkList').innerHTML = renderList(data);
                     } catch(e) {
-                        document.getElementById('linkList').innerHTML = '<p>数据加载失败，请稍后重试</p>';
+                        document.getElementById('linkList').innerHTML = '<p>数据解析失败，请检查 JSON 格式</p>';
                     }
                 }
             };
@@ -37,7 +60,6 @@
         })();
     </script>
 
-    <!-- 极简降级：若浏览器不支持 JS，显示提示 -->
     <noscript>
          <ul>
             <li><a href="https://firestar0507.github.io/mybilibot/">bilibot-info</a></li>
